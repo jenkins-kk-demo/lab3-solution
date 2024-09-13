@@ -16,7 +16,7 @@ pipeline {
       parallel {
         stage('NPM Dependency Audit') {
           steps {
-            sh 'npm audit'
+            sh 'npm audit --audit-level=critical'
           }
         }
 
