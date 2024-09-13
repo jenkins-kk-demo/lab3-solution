@@ -12,28 +12,25 @@ pipeline {
       }
     }
 
-    stage('Dependency Scanning') {
-      parallel {
-        stage('NPM Dependency Audit') {
-          steps {
-            sh 'npm audit --audit-level=critical'
-          }
-        }
-
-        stage('OWASP Dependency Check') {
-          steps {
-            dependencyCheck(additionalArguments: ''
-              ' 
-              --scan\ './\' 
-              --out\ './\'  
-              --format\ 'ALL\' 
-              --disableYarnAudit
-              --prettyPrint ''
-              ', odcInstallation: '
-              OWASP - DepCheck - 10 ')
-            }
-          }
-        }
+    stage('NPM Dependency Audit') {
+      steps {
+        sh 'npm audit --audit-level=critical'
       }
     }
+
+    stage('OWASP Dependency Check') {
+      steps {
+        dependencyCheck(additionalArguments: ''
+          ' 
+          --scan\ './\' 
+          --out\ './\'  
+          --format\ 'ALL\' 
+          --disableYarnAudit
+          --prettyPrint ''
+          ', odcInstallation: '
+          OWASP - DepCheck - 10 ')
+      }
+
+    }
   }
+}
