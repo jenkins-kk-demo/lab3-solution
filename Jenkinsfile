@@ -73,6 +73,14 @@ pipeline {
       }
     }
 
+    stage('Build Docker Image') {
+      steps {
+        sh  ''' 
+              docker build -t siddharth67/solar-system:$GIT_COMMIT .
+        '''
+      }
+    }
+
     }
     post {
       always {
