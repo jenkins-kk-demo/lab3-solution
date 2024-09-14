@@ -89,6 +89,12 @@ pipeline {
         junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
 
         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true, reportDir: 'coverage/lcov-report', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+      
+        sh ''' trivy convert \
+                --format template --template "@/usr/local/share/trivy/templates/html.tpl" \
+                --output trivy-image-CRITICAL-results.html trivy-image-CRITICAL-results.json
+          '''
+        publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true, reportDir: './', reportFiles: 'trivy-image-CRITICAL-results.html', reportName: 'Trivy Image Critical Vul Report', reportTitles: '', useWrapperFileDirectly: true])
       }
     }
 }
