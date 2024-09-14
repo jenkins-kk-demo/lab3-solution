@@ -59,14 +59,17 @@ pipeline {
 
     stage('SonarQube - SAST') {
       steps {
-        sh '''
-          $SONAR_SCANNER_HOME/bin/sonar-scanner \
-            -Dsonar.projectKey=<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Project name in sonarqube>>>>>>>>>>>>>>>>>>>>>\
-            -Dsonar.sources=. \
-            -Dsonar.host.url=<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<sonarqube-url>>>>>>>>>>>>>>>>>>>>:9000 \
-            -Dsonar.javascript.lcov.reportPaths=./coverage/lcov.info \
-            -Dsonar.login=sqp_<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<replace>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        '''
+        withSonarQubeEnv('sonar-qube-server') {
+          sh '''
+            $SONAR_SCANNER_HOME/bin/sonar-scanner \
+              -Dsonar.projectKey=<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Project name in sonarqube>>>>>>>>>>>>>>>>>>>>>\
+              -Dsonar.sources=. \
+              -Dsonar.javascript.lcov.reportPaths=./coverage/lcov.info
+          '''
+        } 
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
       }
     }
 
