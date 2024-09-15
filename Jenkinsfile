@@ -99,7 +99,26 @@ pipeline {
         }
       }
     }
-    
+
+    stage('Localstack - AWS S3') {
+      steps {
+        withAWS(credentials: 'localstack-aws-credentials', endpointUrl: 'http://localhost:4566', region: 'us-east-1') {
+          sh  '''
+              ls -ltr
+              mkdir reports-$BUILD_ID
+              cp -rf coverage/ reports-$BUILD_ID/
+              cp dependency*.* test-results.xml trivy*.* reports-$BUILD_ID/
+              ls -ltr reports-$BUILD_ID/
+            '''
+          s3Upload(
+              file: "reports-$BUILD_ID", 
+              bucket:'solar-system-jenkins-reports-bucket', 
+              path:"jenkins-$BUILD_ID/",
+              pathStyleAccessEnabled: true
+          )
+        }
+      }
+    }
     }
     post {
       always {
