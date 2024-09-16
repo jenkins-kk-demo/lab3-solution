@@ -220,6 +220,14 @@ pipeline {
             -c zap_ignore_rules
         '''
       }
+    }
+
+    stage('Deploy to Prod?') {
+      steps {
+        timeout(time: 1, unit: 'DAYS') {
+          input message: 'Is the PR Merged and ArgoCD Synced?', ok: 'YES! PR is Merged and ArgoCD Application is Synced', submitter: 'admin'
+        }
+      }
     }   
     }
     post {
