@@ -10,6 +10,7 @@ pipeline {
     MONGO_USERNAME = credentials('mongo-db-username')
     MONGO_PASSWORD = credentials('mongo-db-password')
     SONAR_SCANNER_HOME = tool 'sonarqube-scanner-610'
+    GITEA_TOKEN = credentials('gitea-api-token')
   }
 
   stages {
@@ -156,9 +157,62 @@ pipeline {
             '''
         }  
     }
+
+    stage('Update and Commit Image Tag') {
+      when {
+        branch 'PR*'
+      }
+      steps {
+        sh 'git clone -b main <<<replace-gitea-url>>>/dasher-org/solar-system-gitops-argocd'
+        dir("solar-system-gitops-argocd/kubernetes") {
+          sh '''
+            git checkout main
+            git checkout -b feature-$BUILD_ID
+            sed -i "s#<<<<REPLACE-dockerhub-username>>>.*#<<<<REPLACE-dockerhub-username>>>/solar-system:$GIT_COMMIT#g" deployment.yml
+            cat deployment.yml
+            git config --global --unset-all user.name
+            git config --global user.email "jenkins@dasher.com"
+            git remote set-url origin http://$GITEA_TOKEN@<<<replace-gitea-domain>>>/dasher-org/solar-system-gitops-argocd
+            git add .
+            git commit -am "Updated docker image"
+            git push -u origin feature-$BUILD_ID
+          '''
+        }
+      }
+    }
+
+    stage('Kubernetes Deployment - Raise PR') {
+      when {
+        branch 'PR*'
+      }
+      steps {
+        sh """
+          curl -X 'POST' \
+            '<<<replace-gitea-url>>>/api/v1/repos/dasher-org/solar-system-gitops-argocd/pulls' \
+            -H 'accept: application/json' \
+            -H 'Authorization: token $GITEA_TOKEN' \
+            -H 'Content-Type: application/json' \
+            -d '{
+            "assignee": "<<<replace-gitea-username>>>",
+            "assignees": [
+              "<<<replace-gitea-username>>>"
+            ],
+            "base": "main",
+            "body": "Updated docker image in deployment manifest",
+            "head": "feature-$BUILD_ID",
+            "title": "Updated Docker Image"
+          }'
+        """
+      }
+    } 
     }
     post {
       always {
+        script {
+            if (fileExists('solar-system-gitops-argocd')) {
+            sh 'rm -rf solar-system-gitops-argocd'
+            }
+        }
         publishHTML(allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true, reportDir: './', reportFiles: 'dependency-check-jenkins.html', reportName: 'Dependency Check HTML Report', useWrapperFileDirectly: true)
 
         junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
