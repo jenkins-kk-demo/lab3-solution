@@ -204,7 +204,22 @@ pipeline {
           }'
         """
       }
-    } 
+    }
+
+    stage('DAST - OWASP ZAP') {
+      steps {
+        sh '''
+          chmod 777 $(pwd)
+          echo $(id -u):$(id -g)  
+          docker run -v $(pwd):/zap/wrk/:rw  ghcr.io/zaproxy/zaproxy zap-api-scan.py \
+            -t https://815f-49-206-36-222.ngrok-free.app/api-docs/ \
+            -f openapi \
+            -r zap_report.html \
+            -w zap_report.md \
+            -J zap_json_report.json
+        '''
+      }
+    }   
     }
     post {
       always {
