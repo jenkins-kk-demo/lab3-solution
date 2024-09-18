@@ -228,6 +228,28 @@ pipeline {
           input message: 'Is the PR Merged and ArgoCD Synced?', ok: 'YES! PR is Merged and ArgoCD Application is Synced', submitter: 'admin'
         }
       }
+    }
+
+    stage('Lambda - S3 Upload & Deploy') {
+      steps {
+        withAWS(credentials: 'localstack-aws-credentials', endpointUrl: 'http://localhost:4566', region: 'us-east-1') {
+          sh '''
+            sed -i "/^app\\.listen(3000/ s/^/\\/\\//" app.js
+            sed -i "s/^module.exports = app;/\\/\\/module.exports = app;/g" app.js
+            sed -i "s|^//module.exports.handler|module.exports.handler|" app.js
+            tail -5 app.js
+          '''
+          sh  '''
+            zip -qr solar-system-lambda-$BUILD_ID.zip app* package* index.html node*
+            ls -ltr solar-system-lambda-$BUILD_ID.zip
+          '''
+          s3Upload(
+              file: "solar-system-lambda-${BUILD_ID}.zip", 
+              bucket:'solar-system-lambda-bucket',
+              pathStyleAccessEnabled: true
+            )
+        }
+      }
     }   
     }
     post {
