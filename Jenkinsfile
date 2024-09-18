@@ -272,6 +272,9 @@ pipeline {
       }
     }
     stage('Lambda - Invoke Function') {
+      when {
+        branch 'main'
+      }   
       steps {
         withAWS(credentials: 'localstack-aws-credentials', endpointUrl: 'http://localhost:4566', region: 'us-east-1') {
          sh '''
