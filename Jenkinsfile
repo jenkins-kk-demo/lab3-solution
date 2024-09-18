@@ -207,6 +207,9 @@ pipeline {
     }
 
     stage('DAST - OWASP ZAP') {
+      when {
+        branch 'PR*'
+      }
       steps {
         sh '''
           chmod 777 $(pwd)
@@ -223,6 +226,9 @@ pipeline {
     }
 
     stage('Deploy to Prod?') {
+      when {
+        branch 'main'
+      }
       steps {
         timeout(time: 1, unit: 'DAYS') {
           input message: 'Is the PR Merged and ArgoCD Synced?', ok: 'YES! PR is Merged and ArgoCD Application is Synced', submitter: 'admin'
@@ -231,6 +237,9 @@ pipeline {
     }
 
     stage('Lambda - S3 Upload & Deploy') {
+      when {
+        branch 'main'
+      }      
       steps {
         withAWS(credentials: 'localstack-aws-credentials', endpointUrl: 'http://localhost:4566', region: 'us-east-1') {
           sh '''
@@ -259,6 +268,18 @@ pipeline {
             --function-name solar-system-lambda-function \
             --environment '{"Variables":{ "MONGO_USERNAME": "${MONGO_USERNAME}","MONGO_PASSWORD": "${MONGO_PASSWORD}","MONGO_URI": "${MONGO_URI}"}}'
           """
+        }
+      }
+    }
+    stage('Lambda - Invoke Function') {
+      steps {
+        withAWS(credentials: 'localstack-aws-credentials', endpointUrl: 'http://localhost:4566', region: 'us-east-1') {
+         sh '''
+            sleep 5s
+            function_url_data=$(aws --endpoint-url http://localhost:4566  lambda get-function-url-config --function-name solar-system-lambda-function)
+            function_url=$(echo $function_url_data | jq -r '.FunctionUrl | sub("/$"; "")')
+            curl -Is  $function_url/live | grep -i "200 OK"
+         '''
         }
       }
     }   
